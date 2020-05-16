@@ -1,0 +1,108 @@
+CREATE TABLE `t_order`(
+`id` int comment "id", 
+`ts` string  comment "订单时间", 
+`uid` string comment "用户id",
+`orderid` string comment "订单id",
+`amount` float comment "订单金额"
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+load data local inpath 'order.csv' overwrite into table t_order;
+
+select * from t_order;
+
+1.字符串截取
+select *, substr(ts, 1, 10) as dt, substring(orderid, 1, 8) as dt2
+from t_order;
+
+2.like 筛选
+
+select * 
+from t_order
+where ts like "%08-01%"; 
+
+
+3. 日期提取
+select *, regexp_extract(ts, '(\\d{4}-\\d{2}-\\d{2}).*', 1) as dt3
+from t_order;
+
+
+4. 日期替换
+select *, regexp_replace(ts, '-', '') as dt4
+from t_order;
+
+5. case when 计数
+select count(distinct case when ts like '%2019-08-01%' then orderid end) as 0801_cnt,
+count(distinct case when ts like '%2019-08-02%' then orderid end) as 0802_cnt
+from t_order;
+## 5, 11
+
+
+6.row_number 
+select *, row_number() over (partition by uid order by ts desc) as rk
+from t_order;
+
+7. lag,lead
+
+select *, 
+lag(ts, 1) over (partition by uid order by ts desc) as lag,
+lead(ts, 1) over (partition by uid order by ts desc) as lead
+from t_order;
+
+8.列转行
+select uid, collect_set(orderid) as order_list
+from t_order
+group by uid
+
+9.行转列
+
+-- 使用上一节的结果，定义为tmp表，后面可以直接用
+with tmp as 
+(
+select uid, collect_set(orderid) as order_list
+from t_order
+group by uid
+)
+
+select uid, o_list
+from tmp lateral view explode(order_list) t as o_list;
+
+10
+CREATE TABLE `new_data`(
+`id` int comment "id", 
+`arr` string  comment "数组"
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+STORED AS TEXTFILE;
+
+load data local inpath 'new_data.txt' overwrite into table new_data;
+
+select * from new_data;
+
+select id, arr,
+split(substr(arr, 2, length(arr)-2), ',')[0] arr_1,
+split(substr(arr, 2, length(arr)-2), ',')[1] arr_2,
+split(substr(arr, 2, length(arr)-2), ',')[2] arr_3,
+split(substr(arr, 2, length(arr)-2), ',')[3] arr_4,
+split(substr(arr, 2, length(arr)-2), ',')[4] arr_5,
+split(substr(arr, 2, length(arr)-2), ',')[5] arr_6
+from new_data;
+
+select id, arr,
+substr(split(substr(arr, 2, length(arr)-2), ',')[0], 2, 1) arr_1,
+substr(split(substr(arr, 2, length(arr)-2), ',')[1], 2, 1) arr_2,
+substr(split(substr(arr, 2, length(arr)-2), ',')[2], 2, 1) arr_3,
+substr(split(substr(arr, 2, length(arr)-2), ',')[3], 2, 1) arr_4,
+substr(split(substr(arr, 2, length(arr)-2), ',')[4], 2, 1) arr_5,
+substr(split(substr(arr, 2, length(arr)-2), ',')[5], 2, 1) arr_6
+from new_data;
+
+select id, arr,
+cast(substr(split(substr(arr, 2, length(arr)-2), ',')[0], 2, 1) as int) arr_1,
+cast(substr(split(substr(arr, 2, length(arr)-2), ',')[1], 2, 1) as int) arr_2,
+cast(substr(split(substr(arr, 2, length(arr)-2), ',')[2], 2, 1) as int) arr_3,
+cast(substr(split(substr(arr, 2, length(arr)-2), ',')[3], 2, 1) as int) arr_4,
+cast(substr(split(substr(arr, 2, length(arr)-2), ',')[4], 2, 1) as int) arr_5,
+cast(substr(split(substr(arr, 2, length(arr)-2), ',')[5], 2, 1) as int) arr_6
+from new_data;
